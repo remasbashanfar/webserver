@@ -19,7 +19,7 @@
 
 #define BUFFER_SIZE 1024
 #define DEFAULT_SERVER_PORT 8081
-#define DEFAULT_REMOTE_HOST "131.179.176.34"
+#define DEFAULT_REMOTE_HOST "127.0.0.1"
 #define DEFAULT_REMOTE_PORT 5001
 
 struct server_app {
@@ -158,11 +158,17 @@ void handle_request(struct server_app *app, int client_socket) {
     printf("path: %s\n", path);
     // TODO: Implement proxy and call the function under condition
     // specified in the spec
-    // if (need_proxy(...)) {
-    //    proxy_remote_file(app, client_socket, file_name);
-    // } else {
-    serve_local_file(client_socket, file_name);
-    //}
+
+    // Check if path ends in .ts
+    if (strcmp(path + strlen(path) - 3, ".ts") == 0) {
+        printf("Client requested .ts file '.ts'\n");
+        proxy_remote_file(app, client_socket, request);
+    } else {
+        serve_local_file(client_socket, file_name);
+    }
+
+    // Free dynamically allocated memory
+    free(request);
 }
 
 void serve_local_file(int client_socket, const char *path) {
@@ -266,6 +272,60 @@ void proxy_remote_file(struct server_app *app, int client_socket, const char *re
     // * When connection to the remote server fail, properly generate
     // HTTP 502 "Bad Gateway" response
 
-    char response[] = "HTTP/1.0 501 Not Implemented\r\n\r\n";
-    send(client_socket, response, strlen(response), 0);
+    //char response[] = "HTTP/1.0 501 Not Implemented\r\n\r\n";
+    //send(client_socket, response, strlen(response), 0);
+
+    // Create a socket for the backend server
+    printf("Creating socket for backend server\n");
+
+    int backend_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (backend_socket == -1) {
+        perror("socket failed");
+
+        // Send HTTP 502 Bad Gateway response
+        char *bad_gateway_response = "HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n";
+        send(client_socket, bad_gateway_response, strlen(bad_gateway_response), 0);
+    }
+
+    // Set up the address of the backend server
+    printf("Setting up address of the backend server\n");
+
+    struct sockaddr_in backend_addr;
+    memset(&backend_addr, 0, sizeof(backend_addr));
+    backend_addr.sin_family = AF_INET;
+    backend_addr.sin_addr.s_addr = inet_addr(app->remote_host);
+    backend_addr.sin_port = htons(app->remote_port);
+
+    printf("Backend server IP address: %s\n", app->remote_host);
+    printf("Backend server port: %d\n", app->remote_port);
+
+    // Connect to the backend server
+    printf("Connecting to backend server\n");
+    if (connect(backend_socket, (struct sockaddr *)&backend_addr, sizeof(backend_addr)) < 0) {
+        perror("connection failed");
+        // Send HTTP 502 Bad Gateway response
+        char *bad_gateway_response = "HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n";
+        send(client_socket, bad_gateway_response, strlen(bad_gateway_response), 0);
+        close(backend_socket);
+        return;
+    }
+
+    printf("Connection to the backend server successful.\n");
+    printf("Accepted connection from %s:%d\n", inet_ntoa(backend_addr.sin_addr), ntohs(backend_addr.sin_port));
+
+    // Send the client's request to the backend server
+    printf("Sending client's request to the backend server\n");
+    send(backend_socket, request, strlen(request), 0);
+
+    // Send response from the backend server back to the client
+    printf("Sending response from the backend server back to the client\n");
+    char buffer[BUFFER_SIZE];
+    ssize_t bytes_read;
+    while ((bytes_read = recv(backend_socket, buffer, sizeof(buffer), 0)) > 0) {
+        send(client_socket, buffer, bytes_read, 0);
+    }
+
+    // Close sockets
+    printf("Closing sockets \n");
+    close(backend_socket);
 }
