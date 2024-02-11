@@ -203,12 +203,13 @@ void serve_local_file(int client_socket, const char *path) {
     if (ext) { // Check if there is an extension
         if (strcmp(ext, ".html") == 0) {
             content_type = "text/html; charset=UTF-8";
-        } else if (strcmp(ext, ".css") == 0) {
+        } else if (strcmp(ext, ".txt") == 0) {
+            content_type = "text/plain; charset=UTF-8";
+        }else if (strcmp(ext, ".css") == 0) {
             content_type = "text/css";
         } else if (strcmp(ext, ".js") == 0) {
             content_type = "application/javascript";
-        }
-        else if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) {
+        } else if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) {
             content_type = "image/jpeg";
         }
         else {
