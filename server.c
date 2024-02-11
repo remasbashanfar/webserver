@@ -11,7 +11,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <string.h>
-
+#include <ctype.h>
 /**
  * Project 1 starter code
  * All parts needed to be changed/added are marked with TODO
@@ -40,6 +40,25 @@ void parse_args(int argc, char *argv[], struct server_app *app);
 void handle_request(struct server_app *app, int client_socket);
 void serve_local_file(int client_socket, const char *path);
 void proxy_remote_file(struct server_app *app, int client_socket, const char *path);
+// Function to decode a URL-encoded string
+void url_decode(char *dst, const char *src) {
+    char a, b;
+    while (*src) {
+        if ((*src == '%') && ((a = src[1]) && (b = src[2])) && (isxdigit(a) && isxdigit(b))) {
+            if (a >= 'a') a -= 'a'-'A';
+            if (a >= 'A') a -= ('A' - 10);
+            else a -= '0';
+            if (b >= 'a') b -= 'a'-'A';
+            if (b >= 'A') b -= ('A' - 10);
+            else b -= '0';
+            *dst++ = 16 * a + b;
+            src += 3;
+        } else {
+            *dst++ = *src++;
+        }
+    }
+    *dst++ = '\0';
+}
 
 // The main function is provided and no change is needed
 int main(int argc, char *argv[])
@@ -150,9 +169,12 @@ void handle_request(struct server_app *app, int client_socket) {
     char* file_name = "index.html";
     char method[4], path[1024];
     sscanf(buffer, "%s %s", method, path);
+
+    char decoded_path[1024];
+    url_decode(decoded_path, path);
     //if not index.html, replace file name w/ path
     if (strcmp(path, "/") != 0) {
-        file_name = path + 1; 
+        file_name = decoded_path + 1; 
     }
     printf("filename: %s\n", file_name);
     printf("path: %s\n", path);
