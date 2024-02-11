@@ -235,6 +235,7 @@ void serve_local_file(int client_socket, const char *path) {
     }
 
     // Read the file's content
+    /*
     char file_content[4096];
     ssize_t read_bytes = read(file_fd, file_content, sizeof(file_content) - 1);
     if (read_bytes < 0) {
@@ -247,18 +248,24 @@ void serve_local_file(int client_socket, const char *path) {
     } else {
     printf("Read %zd bytes from file: %s\n", read_bytes, filepath);
     }
+    */
     //return
     // file_content[read_bytes] = '\0'; // Ensure null-termination
 
     // Prepare the HTTP response headers
     char response_header[1024];
     snprintf(response_header, sizeof(response_header), 
-         "HTTP/1.0 200 OK\r\nContent-Type: %s\r\nContent-Length: %zd\r\n\r\n", content_type, read_bytes);
-    printf("Sending response for %s\nContent-Type: %s\nContent-Length: %zd\n", filepath, content_type, read_bytes);
+         "HTTP/1.0 200 OK\r\nContent-Type: %s\r\nContent-Length: %zd\r\n\r\n", content_type, (ssize_t)file_stat.st_size);
+    printf("Sending response for %s\nContent-Type: %s\nContent-Length: %zd\n", filepath, content_type, (ssize_t)file_stat.st_size);
     // Send the response headers
     send(client_socket, response_header, strlen(response_header), 0);
     // Send the file content
-    send(client_socket, file_content, read_bytes, 0);
+    // send(client_socket, file_content, read_bytes, 0);
+    char file_content[4096];
+    ssize_t read_bytes;
+     while ((read_bytes = read(file_fd, file_content, sizeof(file_content))) > 0) {
+        send(client_socket, file_content, read_bytes, 0);
+    }
 
     close(file_fd);
 }
