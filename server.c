@@ -198,24 +198,23 @@ void serve_local_file(int client_socket, const char *path) {
     
     // Determine content type based on file extension
     const char *ext = strrchr(path, '.'); // Find the last '.' in the path, to find content type
-    char *content_type = "text/plain; charset=UTF-8"; //default
+    char *content_type = "application/octet-stream"; //default
     
     if (ext) { // Check if there is an extension
+        // Add more conditions here for other content types if needed
         if (strcmp(ext, ".html") == 0) {
             content_type = "text/html; charset=UTF-8";
-        } else if (strcmp(ext, ".txt") == 0) {
-            content_type = "text/plain; charset=UTF-8";
-        }else if (strcmp(ext, ".css") == 0) {
+        } else if (strcmp(ext, ".css") == 0) {
             content_type = "text/css";
         } else if (strcmp(ext, ".js") == 0) {
             content_type = "application/javascript";
         } else if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) {
             content_type = "image/jpeg";
-        }
-        else {
-        content_type = "application/octet-stream"; // Default binary data handling
-        }
-    }
+        } else if (strcmp(ext, ".png") == 0) {
+            content_type = "image/png";
+        } else if (strcmp(ext, ".txt") == 0) {
+            content_type = "text/plain; charset=UTF-8";
+        } }
 
     struct stat file_stat;
     if (stat(filepath, &file_stat) < 0) {
